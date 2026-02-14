@@ -53,7 +53,15 @@ jobs:
 
       - name: Run tests
         run: |
-          for exe in build/*; do
-            echo "Running $(basename "$exe")..."
-            "$exe"
+          shopt -s nullglob
+          executables=(build/*)
+
+          if [ ${#executables[@]} -eq 0 ]; then
+          echo "No test executables were built."
+          exit 1
+          fi
+
+          for exe in "${executables[@]}"; do
+          echo "Running $(basename "$exe")..."
+          "$exe"
           done
