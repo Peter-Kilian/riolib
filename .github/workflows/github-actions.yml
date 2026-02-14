@@ -16,7 +16,6 @@ jobs:
         standard: [c89, c99, c11, c17]
 
         exclude:
-          # macOS does not provide real GCC by default
           - os: macos-latest
             compiler: gcc
 
@@ -24,44 +23,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install GCC (Linux only)
-        if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'
+      - name: Show compiler version
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc
+          echo "Using compiler: ${{ matrix.compiler }}"
+          ${{ matrix.compiler }} --version
 
-      - name: Set compiler
-        run: echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
-
-      - name: Build all test directories
+      - name: Build each test directory separately
         run: |
+          set -euo pipefail
+
           mkdir -p build
-          for dir in tests/*; do
-            if [ -d "$dir" ]; then
-              name=$(basename "$dir")
-              echo "Building $name..."
 
-              $CC \
-                -std=${{ matrix.standard }} \
-                -Wall -Wextra -Wpedantic -Werror \
-                -Wconversion -Wshadow -Wstrict-prototypes \
-                -Iinclude \
-                "$dir"/*.c \
-                -o "build/$name"
-            fi
+          for dir in tests/*/; do
+            if [ ! -d "$dir" ]; then continue; fi
+
+            name=$(basename "$dir")
+            echo "Building test: $name ..."
+
+            ${{ matrix.compiler }} \
+              -std=${{ matrix.standard }} \
+              -Wall -Wextra -Wpedantic -Werror \
+              -Wconversion -Wshadow -Wstrict-prototypes \
+              -Iinclude \
+              "$dir"/*.c \
+              -o "build/$name"
+
+            echo "Built: build/$name"
           done
 
-      - name: Run tests
+      - name: Run all built tests
         run: |
-          shopt -s nullglob
-          executables=(build/*)
+          set -euo pipefail
 
-          if [ ${#executables[@]} -eq 0 ]; then
-          echo "No test executables were built."
-          exit 1
+          found=false
+
+          for exe in build/*; do
+            if [ ! -x "$exe" ]; then continue; fi
+
+            found=true
+            echo ""
+            echo "────────────────────────────────────────"
+            echo "Running $(basename "$exe") ..."
+            echo "────────────────────────────────────────"
+
+            ./"$exe" || {
+              echo "Test $(basename "$exe") failed!"
+              exit 1
+            }
+          done
+
+          if [ "$found" = false ]; then
+            echo "Error: No test executables were built in ./build/"
+            ls -la build/ || true
+            exit 1
           fi
 
-          for exe in "${executables[@]}"; do
-          echo "Running $(basename "$exe")..."
-          "$exe"
-          done
+          echo "All tests passed."
