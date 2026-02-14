@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [gcc, clang]
+        standard: [c89, c99, c11, c17]
+
+        exclude:
+          # macOS does not provide real GCC by default
+          - os: macos-latest
+            compiler: gcc
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GCC (Linux only)
+        if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc
+
+      - name: Set compiler
+        run: echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
+
+      - name: Build all test directories
+        run: |
+          mkdir -p build
+          for dir in tests/*; do
+            if [ -d "$dir" ]; then
+              name=$(basename "$dir")
+              echo "Building $name..."
+
+              $CC \
+                -std=${{ matrix.standard }} \
+                -Wall -Wextra -Wpedantic -Werror \
+                -Wconversion -Wshadow -Wstrict-prototypes \
+                -Iinclude \
+                "$dir"/*.c \
+                -o "build/$name"
+            fi
+          done
+
+      - name: Run tests
+        run: |
+          for exe in build/*; do
+            echo "Running $(basename "$exe")..."
+            "$exe"
+          done
