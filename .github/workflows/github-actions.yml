@@ -44,7 +44,7 @@ jobs:
               -std=${{ matrix.standard }} \
               -Wall -Wextra -Wpedantic -Werror \
               -Wconversion -Wshadow -Wstrict-prototypes \
-              -I. \
+              -I../../ \
               "$dir"/*.c \
               -o "build/$name"
 
