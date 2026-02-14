@@ -9,4 +9,7 @@
  * Written by Peter Kilian
  */
 
+#ifndef RIO_TYPES
+#define RIO_TYPES
 
+#endif /* RIO_TYPES */

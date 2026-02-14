@@ -54,7 +54,6 @@ jobs:
         echo "Built: build/$name"
         done
 
-
       - name: Run all built tests
         run: |
           set -euo pipefail
