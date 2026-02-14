@@ -34,22 +34,26 @@ jobs:
 
           mkdir -p build
 
+          # Determine root of the repo to use for includes
+          REPO_ROOT=$(pwd)
+
           for dir in tests/*/; do
-            if [ ! -d "$dir" ]; then continue; fi
+          if [ ! -d "$dir" ]; then continue; fi
 
-            name=$(basename "$dir")
-            echo "Building test: $name ..."
+          name=$(basename "$dir")
+        echo "Building test: $name ..."
 
-            ${{ matrix.compiler }} \
-              -std=${{ matrix.standard }} \
-              -Wall -Wextra -Wpedantic -Werror \
-              -Wconversion -Wshadow -Wstrict-prototypes \
-              -I../../ \
-              "$dir"/*.c \
-              -o "build/$name"
+        ${{ matrix.compiler }} \
+        -std=${{ matrix.standard }} \
+        -Wall -Wextra -Wpedantic -Werror \
+        -Wconversion -Wshadow -Wstrict-prototypes \
+        -I"$REPO_ROOT" \
+                      "$dir"/*.c \
+                            -o "build/$name"
 
-            echo "Built: build/$name"
-          done
+        echo "Built: build/$name"
+        done
+
 
       - name: Run all built tests
         run: |
@@ -58,24 +62,24 @@ jobs:
           found=false
 
           for exe in build/*; do
-            if [ ! -x "$exe" ]; then continue; fi
+          if [ ! -x "$exe" ]; then continue; fi
 
-            found=true
-            echo ""
-            echo "────────────────────────────────────────"
-            echo "Running $(basename "$exe") ..."
-            echo "────────────────────────────────────────"
+          found=true
+          echo ""
+          echo "────────────────────────────────────────"
+          echo "Running $(basename "$exe") ..."
+          echo "────────────────────────────────────────"
 
-            ./"$exe" || {
-              echo "Test $(basename "$exe") failed!"
-              exit 1
-            }
-          done
-
-          if [ "$found" = false ]; then
-            echo "Error: No test executables were built in ./build/"
-            ls -la build/ || true
+          ./"$exe" || {
+            echo "Test $(basename "$exe") failed!"
             exit 1
-          fi
+        }
+        done
 
-          echo "All tests passed."
+        if [ "$found" = false ]; then
+        echo "Error: No test executables were built in ./build/"
+        ls -la build/ || true
+        exit 1
+        fi
+
+        echo "All tests passed."
